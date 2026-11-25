@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="description"
+      content="하루 한도와 이월 금액을 기록하는 가계부"
+    />
+    <title>가계부</title>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="ledger.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main class="ledger" aria-label="가계부">
+      <header class="ledger-header">
+        <div class="date-navigation" aria-label="날짜 선택">
+          <button
+            type="button"
+            class="icon-button"
+            id="previous-day"
+            aria-label="이전 날"
+          >
+            ‹
+          </button>
+          <input type="date" id="selected-date" aria-label="기록 날짜" />
+          <button
+            type="button"
+            class="icon-button"
+            id="next-day"
+            aria-label="다음 날"
+          >
+            ›
+          </button>
+        </div>
+        <label class="limit-field" for="daily-limit-input">
+          <span>하루 한도</span>
+          <span class="limit-input-wrap"
+            ><input
+              id="daily-limit-input"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              maxlength="22"
+              aria-describedby="limit-error"
+            /><span>원</span></span
+          >
+        </label>
+      </header>
+      <p
+        id="limit-error"
+        class="error-message limit-error"
+        role="alert"
+        hidden
+      ></p>
+      <div class="carry-line">
+        <button type="button" id="today-button" class="text-button" hidden>
+          오늘로
+        </button>
+        <p
+          title="전날 남은 금액은 더하고 초과한 금액은 차감합니다. 매월 1일에 초기화됩니다."
+        >
+          전일 이월 <strong id="carry-amount">0</strong><span>원</span>
+        </p>
+      </div>
+      <p id="fatal-error" class="error-message" role="alert" hidden></p>
+      <div class="table-wrap">
+        <table class="ledger-table" aria-label="지출 기록">
+          <colgroup>
+            <col class="category-col" />
+            <col class="amount-col" />
+            <col />
+            <col class="delete-col" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col">카테고리</th>
+              <th scope="col" class="amount-heading">금액 <span>(원)</span></th>
+              <th scope="col">상세내용</th>
+              <th scope="col"><span class="sr-only">삭제</span></th>
+            </tr>
+          </thead>
+          <tbody id="ledger-rows"></tbody>
+        </table>
+      </div>
+      <button
+        id="add-row"
+        class="add-row"
+        type="button"
+        aria-label="새 지출 행 추가"
+        title="행 추가"
+      >
+        +
+      </button>
+      <section
+        class="totals"
+        aria-label="지출 합계와 남은 금액"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <div>
+          <span>지출 합계</span
+          ><strong
+            ><span id="spent-amount">0</span
+            ><span class="unit">원</span></strong
+          >
+        </div>
+        <div class="remaining-total">
+          <span>남은 금액</span
+          ><strong
+            ><span id="remaining-amount">0</span
+            ><span class="unit">원</span></strong
+          >
+        </div>
+      </section>
+      <footer>
+        <p id="save-status" role="status">입력하면 자동 저장돼요.</p>
+        <p>매월 1일 이월 초기화</p>
+      </footer>
+    </main>
+  </body>
+</html>
