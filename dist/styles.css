@@ -1,0 +1,484 @@
+:root {
+  color-scheme: light;
+  font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  color: #242424;
+  background: #fff;
+  font-synthesis: none;
+  --line: #e5e5e5;
+  --muted: #858585;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: default;
+  opacity: 0.25;
+}
+button,
+input,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 1.5px solid #555;
+  outline-offset: 2px;
+}
+input {
+  min-width: 0;
+}
+[hidden] {
+  display: none !important;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.ledger {
+  width: calc(100% - 64px);
+  max-width: 920px;
+  margin: 40px auto 28px;
+}
+.ledger-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.date-navigation {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.icon-button {
+  border: 0;
+  background: transparent;
+  width: 28px;
+  height: 34px;
+  font-size: 24px;
+  font-weight: 300;
+  line-height: 1;
+  padding: 0 0 3px;
+  border-radius: 3px;
+}
+.icon-button:hover:not(:disabled) {
+  background: #f3f3f3;
+}
+#selected-date {
+  width: 139px;
+  border: 0;
+  padding: 7px 2px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+#selected-date::-webkit-calendar-picker-indicator {
+  opacity: 0.4;
+  width: 13px;
+  margin: 0 0 0 3px;
+  cursor: pointer;
+}
+.limit-field {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.limit-field > span:first-child {
+  color: #6a6a6a;
+}
+.limit-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 1px solid #bcbcbc;
+  padding: 3px 0 5px;
+}
+.limit-input-wrap:focus-within {
+  border-color: #222;
+}
+#daily-limit-input {
+  width: 112px;
+  padding: 4px 0;
+  background: transparent;
+  border: 0;
+  text-align: right;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+.limit-input-wrap > span {
+  font-size: 11px;
+  color: #777;
+}
+.carry-line {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 28px;
+  margin: 8px 0 17px;
+}
+.carry-line p {
+  margin: 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.carry-line strong {
+  font-weight: 500;
+  color: #555;
+  margin-left: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.carry-line p > span {
+  margin-left: 3px;
+  font-size: 10px;
+}
+.text-button {
+  border: 0;
+  background: transparent;
+  font-size: 11px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 5px;
+  margin-right: auto;
+  color: #666;
+}
+.table-wrap {
+  width: 100%;
+}
+.ledger-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  border-top: 1px solid #555;
+}
+.category-col {
+  width: 23%;
+}
+.amount-col {
+  width: 24%;
+}
+.delete-col {
+  width: 35px;
+}
+th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  color: #888;
+  padding: 13px 10px;
+  border-bottom: 1px solid var(--line);
+}
+th span {
+  font-size: 10px;
+  font-weight: 400;
+}
+.amount-heading {
+  text-align: right;
+  padding-right: 16px;
+}
+td {
+  padding: 3px 5px;
+  border-bottom: 1px solid var(--line);
+  height: 48px;
+}
+td + td {
+  border-left: 1px solid #efefef;
+}
+td:last-child {
+  border-left: 0;
+  padding: 3px 1px;
+  text-align: center;
+}
+.row-control {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  padding: 8px 5px;
+  height: 36px;
+  font-size: 13px;
+}
+.row-control:hover {
+  background: #f8f8f8;
+}
+.row-control:focus {
+  background: #fafafa;
+}
+.row-control::placeholder {
+  color: #b5b5b5;
+}
+.category-select {
+  cursor: pointer;
+  padding-right: 1px;
+}
+.amount-input {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.note-input {
+  padding-left: 7px;
+}
+.delete-row {
+  width: 29px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #aaa;
+  font-size: 19px;
+  border-radius: 3px;
+  line-height: 1;
+}
+.delete-row:hover {
+  color: #333;
+  background: #f2f2f2;
+}
+.delete-row.is-confirming {
+  background: #333;
+  color: #fff;
+}
+.row-message td {
+  height: auto;
+  padding: 5px 10px 8px;
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: left;
+  color: #555;
+  background: #f7f7f7;
+}
+[aria-invalid="true"] {
+  border-color: #777;
+  background: #f3f3f3;
+}
+.add-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  width: 40px;
+  height: 39px;
+  margin: 3px 0 2px;
+  font-size: 25px;
+  font-weight: 300;
+  line-height: 1;
+  color: #666;
+  border-radius: 3px;
+}
+.add-row:hover {
+  background: #f3f3f3;
+  color: #111;
+}
+.totals {
+  width: 290px;
+  max-width: 100%;
+  margin: 12px 0 0 auto;
+  padding-top: 5px;
+}
+.totals > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 10px 2px;
+}
+.totals > div > span {
+  font-size: 12px;
+  color: #666;
+  white-space: nowrap;
+}
+.totals strong {
+  text-align: right;
+  font-size: 17px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.totals .unit {
+  font-size: 11px;
+  font-weight: 400;
+  margin-left: 5px;
+}
+.remaining-total {
+  border-top: 1px solid #dedede;
+}
+.remaining-total strong {
+  font-size: 21px;
+}
+.remaining-total.is-over strong {
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 24px;
+  color: #999;
+  font-size: 10px;
+  line-height: 1.6;
+}
+footer p {
+  margin: 0;
+}
+footer p:last-child {
+  white-space: nowrap;
+}
+.error-message {
+  margin: 6px 0 12px;
+  font-size: 11px;
+  color: #444;
+  line-height: 1.6;
+}
+.limit-error {
+  text-align: right;
+}
+@media (max-width: 620px) {
+  .ledger {
+    width: calc(100% - 32px);
+    margin-top: 20px;
+  }
+  .ledger-header {
+    gap: 10px;
+  }
+  .date-navigation {
+    gap: 1px;
+  }
+  .icon-button {
+    width: 21px;
+    height: 32px;
+    font-size: 22px;
+  }
+  #selected-date {
+    width: 116px;
+    font-size: 12px;
+    padding: 7px 0;
+  }
+  #selected-date::-webkit-calendar-picker-indicator {
+    width: 11px;
+    margin-left: 1px;
+  }
+  .limit-field {
+    display: block;
+    text-align: right;
+    font-size: 10px;
+  }
+  .limit-input-wrap {
+    gap: 4px;
+    padding: 0 0 2px;
+    margin-top: 2px;
+  }
+  #daily-limit-input {
+    width: 91px;
+    font-size: 14px;
+    padding: 3px 0;
+  }
+  .limit-input-wrap > span {
+    font-size: 10px;
+  }
+  .carry-line {
+    min-height: 22px;
+    margin: 8px 0 14px;
+  }
+  .carry-line p {
+    font-size: 10px;
+  }
+  .carry-line strong {
+    margin-left: 7px;
+  }
+  .category-col {
+    width: 27%;
+  }
+  .amount-col {
+    width: 26%;
+  }
+  .delete-col {
+    width: 25px;
+  }
+  th {
+    padding: 11px 5px;
+    font-size: 10px;
+  }
+  th span {
+    font-size: 9px;
+  }
+  .amount-heading {
+    padding-right: 8px;
+  }
+  td {
+    padding: 3px 2px;
+    height: 43px;
+  }
+  .row-control {
+    padding: 6px 3px;
+    height: 34px;
+    font-size: 11px;
+  }
+  .category-select {
+    padding-left: 1px;
+    padding-right: 0;
+  }
+  .note-input {
+    padding-left: 4px;
+  }
+  .delete-row {
+    width: 23px;
+    height: 31px;
+    font-size: 17px;
+  }
+  .add-row {
+    width: 32px;
+    height: 36px;
+    margin-top: 2px;
+    font-size: 24px;
+  }
+  .totals {
+    width: 233px;
+    margin-top: 5px;
+  }
+  .totals > div {
+    padding: 9px 1px;
+  }
+  .totals > div > span {
+    font-size: 11px;
+  }
+  .totals strong {
+    font-size: 15px;
+  }
+  .remaining-total strong {
+    font-size: 19px;
+  }
+  footer {
+    margin-top: 20px;
+    font-size: 9px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+  }
+}
