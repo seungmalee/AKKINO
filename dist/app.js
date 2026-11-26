@@ -18,6 +18,7 @@
   var ledgerBound = false;
   var setupSubmitting = false;
   var introAdvanced = false;
+  var setupResetOnly = false;
 
   function format(amount) {
     return money.format(amount);
@@ -75,14 +76,24 @@
     element.textContent = message || "";
     element.hidden = !message;
   }
-  function setSetupError(message) {
+  function setSetupError(message, field) {
     var element = $("setup-error");
     var input = $("setup-limit");
+    var reset = $("setup-reset-day");
     if (element) {
       element.textContent = message || "";
       element.hidden = !message;
     }
-    if (input) input.setAttribute("aria-invalid", String(Boolean(message)));
+    if (input)
+      input.setAttribute(
+        "aria-invalid",
+        String(Boolean(message && field === input)),
+      );
+    if (reset)
+      reset.setAttribute(
+        "aria-invalid",
+        String(Boolean(message && field === reset)),
+      );
   }
   function showIntro() {
     introAdvanced = false;
@@ -91,37 +102,88 @@
     var next = $("intro-next");
     if (next) next.focus();
   }
-  function showSetup() {
+  function showSetup(resetOnly) {
+    var limitGroup = $("setup-limit-group");
+    var resetGroup = $("setup-reset-group");
     var input = $("setup-limit");
+    var reset = $("setup-reset-day");
     var next = $("setup-next");
+    setupResetOnly = Boolean(resetOnly);
+    fillResetOptions();
     setScreen("setup");
     setSetupError("");
     if (next) next.hidden = true;
+    if (limitGroup) limitGroup.hidden = resetOnly;
+    if (resetGroup) resetGroup.hidden = !resetOnly;
+    if (reset) reset.value = "";
     if (input) {
       input.value = "";
-      input.focus();
+      if (!resetOnly) input.focus();
     }
+    if (resetOnly && reset) reset.focus();
   }
-  function setupAmount() {
+  function fillResetOptions() {
+    var select = $("setup-reset-day");
+    var option;
+    var day;
+    if (!select || select.dataset.optionsReady === "true") return;
+    for (day = 1; day <= 31; day += 1) {
+      option = document.createElement("option");
+      option.value = String(day);
+      option.textContent = day === 31 ? "31일 (말일)" : day + "일";
+      select.append(option);
+    }
+    select.dataset.optionsReady = "true";
+  }
+  function selectedResetDay() {
+    var select = $("setup-reset-day");
+    var raw = select ? select.value : "";
+    if (!/^(?:[1-9]|[12]\d|3[01])$/.test(raw)) return null;
+    return Number(raw);
+  }
+  function setupConfig(showError) {
     var input = $("setup-limit");
+    var resetGroup = $("setup-reset-group");
     var next = $("setup-next");
+    var reset = $("setup-reset-day");
     var raw = input ? input.value.trim() : "";
     var amount;
-    if (!raw) {
+    var resetDay = selectedResetDay();
+    if (!setupResetOnly && !raw) {
+      if (resetGroup) resetGroup.hidden = true;
       if (next) next.hidden = true;
-      setSetupError("");
+      if (showError) {
+        setSetupError("하루 한도를 입력해주세요.", input);
+        if (input) input.focus();
+      }
+      else setSetupError("");
       return null;
     }
-    try {
-      amount = parseMoney(raw, true);
-      if (next) next.hidden = false;
-      setSetupError("");
-      return amount;
-    } catch (error) {
+    if (!setupResetOnly) {
+      try {
+        amount = parseMoney(raw, true);
+      } catch (error) {
+        if (resetGroup) resetGroup.hidden = true;
+        if (next) next.hidden = true;
+        setSetupError(error.message, input);
+        if (showError && input) input.focus();
+        return null;
+      }
+    }
+    if (resetGroup) resetGroup.hidden = false;
+    if (resetDay === null) {
       if (next) next.hidden = true;
-      setSetupError(error.message);
+      if (showError) {
+        setSetupError("초기화 날짜를 선택해주세요.", reset);
+        if (reset) reset.focus();
+      } else if (raw || setupResetOnly) {
+        setSetupError("");
+      }
       return null;
     }
+    if (next) next.hidden = false;
+    setSetupError("");
+    return { amount: amount, resetDay: resetDay, valid: true };
   }
   function setPageError(message) {
     $("fatal-error").textContent = message || "";
@@ -277,12 +339,13 @@
       return;
     }
     if (!probe.present) {
-      showSetup();
+      showSetup(false);
       return;
     }
     try {
       existing = api.open();
-      if (api.needsInitialSetup(existing)) showSetup();
+      if (api.needsInitialSetup(existing)) showSetup(false);
+      else if (api.needsResetSetup(existing)) showSetup(true);
       else enterLedger(existing);
     } catch (error) {
       introAdvanced = false;
@@ -290,27 +353,37 @@
     }
   }
   function completeSetup() {
-    var input = $("setup-limit");
-    var amount = setupAmount();
+    var config = setupConfig(true);
+    var amount = config && config.amount;
+    var resetDay = config && config.resetDay;
     var current;
     var next;
     if (setupSubmitting) return false;
-    if (amount === null) {
-      if (input && !input.value.trim()) setSetupError("하루 한도를 입력해주세요.");
-      return false;
-    }
+    if (!config) return false;
     setupSubmitting = true;
     try {
       current = api.open({
-        initialLimit: amount,
+        initialLimit: setupResetOnly ? undefined : amount,
+        initialResetDay: resetDay,
         onboardingComplete: true,
       });
-      if (!current.onboardingComplete && api.needsInitialSetup(current)) {
+      if (!current.onboardingComplete && api.needsInitialSetup(current) && !setupResetOnly) {
         next = api.setLimit(
           current,
           current.startDate < api.today() ? api.today() : current.startDate,
           amount,
         );
+        next = api.setResetDay(next, resetDay);
+        next.onboardingComplete = true;
+        saveState(next);
+        current = next;
+      } else if (api.needsResetSetup(current)) {
+        next = api.setResetDay(current, resetDay);
+        next.onboardingComplete = true;
+        saveState(next);
+        current = next;
+      } else if (!current.onboardingComplete) {
+        next = current;
         next.onboardingComplete = true;
         saveState(next);
         current = next;
@@ -349,7 +422,13 @@
     }
     if (input) {
       input.addEventListener("input", function () {
-        setupAmount();
+        setupConfig(false);
+      });
+    }
+    var reset = $("setup-reset-day");
+    if (reset) {
+      reset.addEventListener("change", function () {
+        setupConfig(false);
       });
     }
     if (form) {
@@ -360,7 +439,7 @@
     }
     if (setup) {
       setup.addEventListener("click", function (event) {
-        if (event.target === setup && setupAmount() !== null) completeSetup();
+        if (event.target === setup && setupConfig(false)) completeSetup();
       });
     }
   }
@@ -768,6 +847,31 @@
     $("today-button").hidden = selectedDate === today;
     if (!limitDirty && document.activeElement !== $("daily-limit-input"))
       $("daily-limit-input").value = format(api.day(state, selectedDate).limit);
+    syncResetSummary();
+  }
+  function syncResetSummary() {
+    var summary = $("reset-summary");
+    var carryInfo = $("carry-info");
+    var info;
+    var label;
+    if (!state || (!summary && !carryInfo)) return;
+    try {
+      info = api.resetInfo(state, selectedDate);
+    } catch (ignore) {
+      return;
+    }
+    label = info.resetDay === 31 ? "31일 (말일)" : info.resetDay + "일";
+    if (summary)
+      summary.textContent =
+        "매월 " + label + " 초기화 · 다음 초기화 " + info.nextReset;
+    if (carryInfo)
+      carryInfo.title =
+        info.cycleStart +
+        "부터 " +
+        shiftDate(info.nextReset, -1) +
+        "까지 이월되고 " +
+        info.nextReset +
+        "에 초기화됩니다.";
   }
   function saveLimit() {
     if (!limitDirty) return true;
