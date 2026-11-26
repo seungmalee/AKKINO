@@ -293,6 +293,32 @@
       return false;
     }
   }
+  function isCompositionEvent(event) {
+    return Boolean(event.isComposing || event.keyCode === 229);
+  }
+  function persistAndAppendRow(row) {
+    var selected;
+    var rawAmount;
+    if (row.removed || row.addingCategory) return false;
+    selected = row.categorySelect.value;
+    if (selected === ADD_CATEGORY) return false;
+    if (selected !== row.category) {
+      row.category = selected;
+      row.dirty = true;
+    }
+    rawAmount = row.amountInput.value.trim();
+    if (!row.category) {
+      setRowError(row, "카테고리를 선택해주세요.", row.categorySelect);
+      return false;
+    }
+    if (!rawAmount) {
+      setRowError(row, "금액을 입력해주세요.", row.amountInput);
+      return false;
+    }
+    if (!persistRow(row) || !row.savedId) return false;
+    appendBlankRow();
+    return true;
+  }
   function createInput(className, label, key) {
     var input = document.createElement("input");
     input.type = "text";
@@ -384,8 +410,16 @@
         persistRow(row);
       }
     });
+    row.categorySelect.addEventListener("keydown", function (event) {
+      if (isCompositionEvent(event) || event.repeat || event.key !== "Enter")
+        return;
+      if (!this.value || this.value === ADD_CATEGORY || !row.amountInput.value.trim())
+        return;
+      event.preventDefault();
+      persistAndAppendRow(row);
+    });
     row.categoryInput.addEventListener("keydown", function (event) {
-      if (event.isComposing) return;
+      if (isCompositionEvent(event) || event.repeat) return;
       if (event.key === "Enter") {
         event.preventDefault();
         if (finishCategory(row, false)) row.amountInput.focus();
@@ -412,13 +446,10 @@
         }, 0);
       });
       input.addEventListener("keydown", function (event) {
-        if (event.isComposing) return;
+        if (isCompositionEvent(event) || event.repeat) return;
         if (event.key === "Enter") {
           event.preventDefault();
-          if (persistRow(row)) {
-            if (input === row.amountInput) row.noteInput.focus();
-            else input.blur();
-          }
+          persistAndAppendRow(row);
         }
       });
     });
@@ -431,6 +462,13 @@
     rows.push(row);
     dateRows.set(selectedDate, rows);
     $("ledger-rows").append(row.element, row.messageElement);
+  }
+  function appendBlankRow() {
+    var row = createRow(null, selectedDate);
+    appendRow(row);
+    row.categorySelect.focus();
+    updateStatus();
+    return row;
   }
   function removeRow(row) {
     clearTimeout(row.timer);
@@ -632,10 +670,7 @@
     });
     $("add-row").addEventListener("click", function () {
       syncCurrentDay(false);
-      var row = createRow(null, selectedDate);
-      appendRow(row);
-      row.categorySelect.focus();
-      updateStatus();
+      appendBlankRow();
     });
     $("daily-limit-input").addEventListener("focus", function () {
       if (!limitDirty) limitEditDate = selectedDate;
