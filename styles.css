@@ -300,14 +300,11 @@ td:last-child {
   width: 44px;
   height: 44px;
   margin: 14px 0 2px;
-  padding: 0 0 2px;
+  padding: 0;
   border: 0;
   border-radius: 50%;
   background: var(--accent);
   color: #fff;
-  font-size: 26px;
-  font-weight: 300;
-  line-height: 1;
   touch-action: manipulation;
   transition: background-color 150ms ease, transform 150ms ease;
 }
@@ -318,6 +315,16 @@ td:last-child {
 }
 .add-row:active {
   transform: scale(0.95);
+}
+/* Drawn as an icon, not a "+" glyph, so it sits dead-center in every font. */
+.add-row svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
 }
 .totals {
   width: 290px;
