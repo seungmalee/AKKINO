@@ -1,7 +1,7 @@
 // Offline support. Online: always fetch fresh files (bypassing the browser's
 // HTTP cache) and keep a copy. Offline: serve the saved copy.
 // Bump CACHE when shipping changes so old copies are cleared.
-var CACHE = "akkino-v3";
+var CACHE = "akkino-v4";
 var SHELL = [
   "./",
   "index.html",
