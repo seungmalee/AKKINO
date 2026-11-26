@@ -1,0 +1,17 @@
+{
+  "name": "akkino-desktop",
+  "productName": "AKKINO",
+  "version": "1.0.0",
+  "description": "AKKINO 가계부 데스크톱 앱",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "copy-app": "node scripts/copy-app.js",
+    "start": "npm run copy-app && electron .",
+    "package": "npm run copy-app && electron-packager . AKKINO --platform=win32 --arch=x64 --out=out --overwrite --icon=build/icon.ico --ignore=^/out --ignore=^/scripts --app-copyright=AKKINO"
+  },
+  "devDependencies": {
+    "@electron/packager": "18.3.6",
+    "electron": "33.2.1"
+  }
+}
