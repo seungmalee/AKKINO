@@ -839,15 +839,31 @@
   }
   function paintDate() {
     var today = api.today();
-    $("selected-date").min = state.startDate;
-    $("selected-date").max = today;
+    $("selected-date").min = api.minDate;
+    $("selected-date").max = api.maxDate;
     $("selected-date").value = selectedDate;
-    $("previous-day").disabled = selectedDate <= state.startDate;
-    $("next-day").disabled = selectedDate >= today;
+    $("previous-day").disabled = selectedDate <= api.minDate;
+    $("next-day").disabled = selectedDate >= api.maxDate;
     $("today-button").hidden = selectedDate === today;
     if (!limitDirty && document.activeElement !== $("daily-limit-input"))
       $("daily-limit-input").value = format(api.day(state, selectedDate).limit);
     syncResetSummary();
+  }
+  function resetAllData() {
+    if (
+      !window.confirm(
+        "모든 지출 기록과 한도, 초기화 날짜 설정을 지울까요?\n지운 데이터는 되돌릴 수 없어요.",
+      )
+    )
+      return;
+    try {
+      api.clear();
+    } catch (error) {
+      setPageError(error.message || "데이터를 지우지 못했어요.");
+      return;
+    }
+    hasSaved = false;
+    window.location.reload();
   }
   function syncResetSummary() {
     var summary = $("reset-summary");
@@ -900,7 +916,7 @@
     return valid;
   }
   function navigate(iso) {
-    if (!iso || iso < state.startDate || iso > api.today()) {
+    if (!iso || iso < api.minDate || iso > api.maxDate) {
       $("selected-date").value = selectedDate;
       return;
     }
@@ -961,6 +977,7 @@
     $("today-button").addEventListener("click", function () {
       navigate(api.today());
     });
+    $("reset-data").addEventListener("click", resetAllData);
     $("add-row").addEventListener("click", function () {
       syncCurrentDay(false);
       appendBlankRow();
