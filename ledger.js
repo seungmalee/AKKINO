@@ -9,6 +9,8 @@
   var MAX_MONEY = 1000000000000;
   var MAX_SAFE_INTEGER = 9007199254740991;
   var SEOUL_OFFSET_MS = 9 * 60 * 60 * 1000;
+  var MIN_DATE = '2000-01-01';
+  var MAX_DATE = '2099-12-31';
   var idSequence = 0;
 
   function error(message) {
@@ -577,14 +579,39 @@
   }
 
   function assertAvailableDate(state, isoDate, label) {
-    var now = today();
+    // Any calendar date may be viewed or written; writing before the start
+    // date moves the start back (see extendStartDate).
     assertIsoDate(isoDate, label || '날짜');
-    if (compareDates(isoDate, state.startDate) < 0) {
-      error('개설일보다 이전 날짜는 사용할 수 없습니다.');
+    if (compareDates(isoDate, MIN_DATE) < 0 || compareDates(isoDate, MAX_DATE) > 0) {
+      error('2000년부터 2099년 사이 날짜만 사용할 수 있습니다.');
     }
-    if (compareDates(isoDate, now) > 0) {
-      error('오늘 이후 날짜는 사용할 수 없습니다.');
+  }
+
+  // Returns a copy whose ledger starts no later than isoDate. Reset settings
+  // that were in place from the old start keep covering the new start.
+  function extendStartDate(state, isoDate) {
+    var oldStart = state.startDate;
+    var next;
+    var i;
+    var change;
+    var previousDay;
+    var boundary;
+    if (compareDates(isoDate, oldStart) >= 0) return state;
+    next = cloneState(state);
+    next.startDate = isoDate;
+    for (i = 0; i < next.resetChanges.length; i += 1) {
+      change = next.resetChanges[i];
+      if (change.configuredOn === oldStart && change.cycleStart === oldStart) {
+        change.configuredOn = isoDate;
+        change.cycleStart = isoDate;
+      } else if (change.cycleStart === oldStart) {
+        previousDay = i > 0 ? next.resetChanges[i - 1].resetDay : 1;
+        boundary = boundaryOnOrBefore(change.configuredOn, previousDay);
+        change.cycleStart =
+          compareDates(boundary, isoDate) < 0 ? isoDate : boundary;
+      }
     }
+    return next;
   }
 
   function effectiveLimit(state, isoDate) {
@@ -600,10 +627,15 @@
 
   function effectiveResetChange(state, isoDate) {
     var active = null;
+    var first = state.resetChanges[0];
     var i;
     for (i = 0; i < state.resetChanges.length; i += 1) {
       if (compareDates(state.resetChanges[i].configuredOn, isoDate) > 0) break;
       active = state.resetChanges[i];
+    }
+    // A reset day chosen when the ledger started also covers earlier days.
+    if (!active && first && compareDates(first.configuredOn, state.startDate) <= 0) {
+      active = first;
     }
     return active;
   }
@@ -617,7 +649,7 @@
     var active = effectiveResetChange(state, isoDate);
     var resetDay = active ? active.resetDay : 1;
     var start;
-    if (active) {
+    if (active && compareDates(isoDate, active.configuredOn) >= 0) {
       if (
         compareDates(isoDate, boundaryOnOrAfter(active.configuredOn, resetDay)) <
         0
@@ -745,6 +777,16 @@
     }
   }
 
+  function clear() {
+    var storage = getStorage();
+    if (!storage) error('저장 공간에 접근할 수 없습니다.');
+    try {
+      storage.removeItem(STORAGE_KEY);
+    } catch (removeError) {
+      error('데이터를 지우지 못했습니다.');
+    }
+  }
+
   function hasStoredState() {
     var storage = getStorage();
     var raw;
@@ -847,6 +889,7 @@
 
     assertAvailableDate(normalized, isoDate, '한도 날짜');
     assertNonNegativeInteger(amount, '한도');
+    normalized = extendStartDate(normalized, isoDate);
     changes = normalized.limitChanges.map(function (change) {
       if (change.date === isoDate) {
         replaced = true;
@@ -936,6 +979,7 @@
     assertPositiveInteger(amount, '지출 금액');
     if (note == null) note = '';
     if (typeof note !== 'string') error('메모는 문자열이어야 합니다.');
+    normalized = extendStartDate(normalized, isoDate);
 
     entry = {
       id: makeId(normalized),
@@ -1014,6 +1058,9 @@
     today: today,
     open: open,
     hasStoredState: hasStoredState,
+    clear: clear,
+    minDate: MIN_DATE,
+    maxDate: MAX_DATE,
     needsInitialSetup: needsInitialSetup,
     needsResetSetup: needsResetSetup,
     save: save,
