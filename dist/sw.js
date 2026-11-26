@@ -1,6 +1,6 @@
 // Offline support: serve the app shell from cache, refresh it in the background.
 // Bump CACHE when shipping changes so installed apps pick up the new files.
-var CACHE = "akkino-v1";
+var CACHE = "akkino-v2";
 var SHELL = [
   "./",
   "index.html",
