@@ -150,7 +150,8 @@
       limit: state.limit,
       limitChanges: state.limitChanges.map(function (change) {
         return { date: change.date, limit: change.limit };
-      })
+      }),
+      onboardingComplete: state.onboardingComplete === true
     };
     return copy;
   }
@@ -317,17 +318,21 @@
       categories: categories,
       entries: normalizedEntries,
       limit: baseLimit,
-      limitChanges: changes
+      limitChanges: changes,
+      onboardingComplete: rawState.onboardingComplete === true
     };
   }
 
-  function createFreshState() {
+  function createFreshState(initialLimit, onboardingComplete) {
+    var limit = initialLimit == null ? INITIAL_LIMIT : initialLimit;
+    assertNonNegativeInteger(limit, '기본 한도');
     return {
       startDate: today(),
       categories: DEFAULT_CATEGORIES.slice(),
       entries: [],
-      limit: INITIAL_LIMIT,
-      limitChanges: []
+      limit: limit,
+      limitChanges: [],
+      onboardingComplete: onboardingComplete === true
     };
   }
 
@@ -455,6 +460,40 @@
     }
   }
 
+  function hasStoredState() {
+    var storage = getStorage();
+    var raw;
+    if (!storage) error('저장 공간에 접근할 수 없습니다.');
+    try {
+      raw = storage.getItem(STORAGE_KEY);
+    } catch (readError) {
+      error('저장된 가계부를 읽을 수 없습니다.');
+    }
+    return raw != null && raw !== '';
+  }
+
+  function hasDefaultCategories(categories) {
+    var i;
+    if (!Array.isArray(categories) || categories.length !== DEFAULT_CATEGORIES.length) {
+      return false;
+    }
+    for (i = 0; i < DEFAULT_CATEGORIES.length; i += 1) {
+      if (categories[i] !== DEFAULT_CATEGORIES[i]) return false;
+    }
+    return true;
+  }
+
+  function needsInitialSetup(state) {
+    var normalized = stateForUse(state);
+    return Boolean(
+      normalized.onboardingComplete !== true &&
+      normalized.entries.length === 0 &&
+      normalized.limit === INITIAL_LIMIT &&
+      normalized.limitChanges.length === 0 &&
+      hasDefaultCategories(normalized.categories)
+    );
+  }
+
   function save(state) {
     var normalized = stateForUse(state);
     var serialized;
@@ -475,15 +514,25 @@
     }
   }
 
-  function open() {
+  function open(options) {
     var stored = readStoredState();
     var fresh;
+    var initialLimit;
+    var onboardingComplete;
+
+    if (options != null) {
+      if (!isObject(options)) error('초기 설정 형식이 올바르지 않습니다.');
+      initialLimit = options.initialLimit;
+      if (initialLimit != null)
+        assertNonNegativeInteger(initialLimit, '기본 한도');
+      onboardingComplete = options.onboardingComplete === true;
+    }
 
     if (stored.state) {
       return cloneState(stored.state);
     }
 
-    fresh = createFreshState();
+    fresh = createFreshState(initialLimit, onboardingComplete);
     save(fresh);
     return cloneState(fresh);
   }
@@ -626,6 +675,8 @@
   var Ledger = {
     today: today,
     open: open,
+    hasStoredState: hasStoredState,
+    needsInitialSetup: needsInitialSetup,
     save: save,
     day: day,
     setLimit: setLimit,
