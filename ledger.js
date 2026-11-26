@@ -42,6 +42,12 @@
     }
   }
 
+  function assertResetDay(value, label) {
+    if (!isSafeInteger(value) || value < 1 || value > 31) {
+      error((label || '초기화 날짜') + '은 1일부터 31일 사이여야 합니다.');
+    }
+  }
+
   function assertNonEmptyString(value, label) {
     if (typeof value !== 'string' || value.trim() === '') {
       error(label + '을(를) 입력해 주세요.');
@@ -103,6 +109,97 @@
       String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
   }
 
+  function daysInMonth(year, month) {
+    var date = new Date(0);
+    date.setUTCHours(0, 0, 0, 0);
+    date.setUTCFullYear(year, month, 0);
+    return date.getUTCDate();
+  }
+
+  function monthBoundary(year, month, resetDay) {
+    return formatDateParts(
+      year,
+      month,
+      Math.min(resetDay, daysInMonth(year, month)),
+    );
+  }
+
+  function monthStart(isoDate) {
+    return isoDate.slice(0, 8) + '01';
+  }
+
+  function nextMonthStart(isoDate) {
+    var date = parseIsoDate(monthStart(isoDate));
+    date.setUTCMonth(date.getUTCMonth() + 1);
+    return formatDateParts(
+      date.getUTCFullYear(),
+      date.getUTCMonth() + 1,
+      1,
+    );
+  }
+
+  function previousMonthStart(isoDate) {
+    var date = parseIsoDate(monthStart(isoDate));
+    date.setUTCMonth(date.getUTCMonth() - 1);
+    return formatDateParts(
+      date.getUTCFullYear(),
+      date.getUTCMonth() + 1,
+      1,
+    );
+  }
+
+  function boundaryOnOrAfter(isoDate, resetDay) {
+    var date = parseIsoDate(isoDate);
+    var candidate = monthBoundary(
+      date.getUTCFullYear(),
+      date.getUTCMonth() + 1,
+      resetDay,
+    );
+    if (compareDates(candidate, isoDate) < 0) {
+      candidate = nextMonthStart(isoDate);
+      date = parseIsoDate(candidate);
+      candidate = monthBoundary(
+        date.getUTCFullYear(),
+        date.getUTCMonth() + 1,
+        resetDay,
+      );
+    }
+    return candidate;
+  }
+
+  function boundaryOnOrBefore(isoDate, resetDay) {
+    var date = parseIsoDate(isoDate);
+    var candidate = monthBoundary(
+      date.getUTCFullYear(),
+      date.getUTCMonth() + 1,
+      resetDay,
+    );
+    if (compareDates(candidate, isoDate) > 0) {
+      candidate = previousMonthStart(isoDate);
+      date = parseIsoDate(candidate);
+      candidate = monthBoundary(
+        date.getUTCFullYear(),
+        date.getUTCMonth() + 1,
+        resetDay,
+      );
+    }
+    return candidate;
+  }
+
+  function nextBoundaryAfter(isoDate, resetDay) {
+    var candidate = boundaryOnOrAfter(isoDate, resetDay);
+    if (compareDates(candidate, isoDate) <= 0) {
+      candidate = nextMonthStart(isoDate);
+      var date = parseIsoDate(candidate);
+      candidate = monthBoundary(
+        date.getUTCFullYear(),
+        date.getUTCMonth() + 1,
+        resetDay,
+      );
+    }
+    return candidate;
+  }
+
   function today() {
     var now = new Date();
     var seoulTime = new Date(now.getTime() + SEOUL_OFFSET_MS);
@@ -151,6 +248,15 @@
       limitChanges: state.limitChanges.map(function (change) {
         return { date: change.date, limit: change.limit };
       }),
+      resetDay: state.resetDay,
+      resetChanges: state.resetChanges.map(function (change) {
+        return {
+          configuredOn: change.configuredOn,
+          resetDay: change.resetDay,
+          cycleStart: change.cycleStart,
+        };
+      }),
+      resetConfigured: state.resetConfigured === true,
       onboardingComplete: state.onboardingComplete === true
     };
     return copy;
@@ -211,6 +317,93 @@
     return undefined;
   }
 
+  function readResetChangeDay(raw) {
+    if (!isObject(raw)) return undefined;
+    if (raw.resetDay != null) return raw.resetDay;
+    if (raw.day != null) return raw.day;
+    if (raw.value != null) return raw.value;
+    return undefined;
+  }
+
+  function normalizeResetChanges(rawChanges, startDate, rawResetDay, rawConfigured) {
+    var changes = [];
+    var seen = Object.create(null);
+    var i;
+    var configuredOn;
+    var cycleStart;
+    var resetDay;
+    var raw;
+    var dates;
+
+    if (rawChanges == null) {
+      if (rawResetDay != null) {
+        assertResetDay(rawResetDay);
+        return [{
+          configuredOn: startDate,
+          resetDay: rawResetDay,
+          cycleStart: startDate,
+        }];
+      }
+      if (rawConfigured === true) {
+        return [{ configuredOn: startDate, resetDay: 1, cycleStart: startDate }];
+      }
+      return changes;
+    }
+
+    if (Array.isArray(rawChanges)) {
+      for (i = 0; i < rawChanges.length; i += 1) {
+        raw = rawChanges[i];
+        if (!isObject(raw)) error('초기화 변경 기록 형식이 올바르지 않습니다.');
+        configuredOn = raw.configuredOn;
+        if (configuredOn == null) configuredOn = raw.date;
+        if (configuredOn == null) configuredOn = raw.effectiveDate;
+        resetDay = readResetChangeDay(raw);
+        assertIsoDate(configuredOn, '초기화 변경 날짜');
+        if (compareDates(configuredOn, startDate) < 0) {
+          error('개설일보다 이전 날짜에는 초기화를 설정할 수 없습니다.');
+        }
+        assertResetDay(resetDay);
+        if (seen[configuredOn]) error('같은 날짜의 초기화 변경이 중복되었습니다.');
+        seen[configuredOn] = true;
+        cycleStart = raw.cycleStart;
+        if (cycleStart == null) cycleStart = startDate;
+        assertIsoDate(cycleStart, '이월 시작 날짜');
+        if (compareDates(cycleStart, startDate) < 0 ||
+            compareDates(cycleStart, configuredOn) > 0) {
+          error('이월 시작 날짜가 올바르지 않습니다.');
+        }
+        changes.push({
+          configuredOn: configuredOn,
+          resetDay: resetDay,
+          cycleStart: cycleStart,
+        });
+      }
+    } else if (isObject(rawChanges)) {
+      dates = Object.keys(rawChanges);
+      for (i = 0; i < dates.length; i += 1) {
+        configuredOn = dates[i];
+        resetDay = rawChanges[configuredOn];
+        assertIsoDate(configuredOn, '초기화 변경 날짜');
+        if (compareDates(configuredOn, startDate) < 0) {
+          error('개설일보다 이전 날짜에는 초기화를 설정할 수 없습니다.');
+        }
+        assertResetDay(resetDay);
+        changes.push({
+          configuredOn: configuredOn,
+          resetDay: resetDay,
+          cycleStart: startDate,
+        });
+      }
+    } else {
+      error('초기화 변경 기록 형식이 올바르지 않습니다.');
+    }
+
+    changes.sort(function (left, right) {
+      return compareDates(left.configuredOn, right.configuredOn);
+    });
+    return changes;
+  }
+
   function normalizeLimitChanges(rawChanges, startDate) {
     var changes = [];
     var seen = Object.create(null);
@@ -266,6 +459,11 @@
     var changes;
     var baseLimit;
     var sourceChanges;
+    var sourceResetChanges;
+    var resetChanges;
+    var rawResetDay;
+    var resetDay;
+    var resetConfigured;
     var seenIds = Object.create(null);
     var normalizedEntries;
     var i;
@@ -301,6 +499,28 @@
     if (sourceChanges == null) sourceChanges = rawState.limits;
     changes = normalizeLimitChanges(sourceChanges, startDate);
 
+    rawResetDay = rawState.resetDay;
+    if (rawResetDay != null) assertResetDay(rawResetDay);
+    sourceResetChanges = rawState.resetChanges;
+    if (sourceResetChanges == null) sourceResetChanges = rawState.resetHistory;
+    resetChanges = normalizeResetChanges(
+      sourceResetChanges,
+      startDate,
+      rawResetDay,
+      rawState.resetConfigured === true,
+    );
+    // An explicit `resetConfigured: false` wins: cloned/saved states carry a
+    // default resetDay of 1 that must not count as a user choice.
+    resetConfigured =
+      rawState.resetConfigured === true ||
+      (rawState.resetConfigured !== false &&
+        (rawResetDay != null || resetChanges.length > 0));
+    resetDay = resetChanges.length
+      ? resetChanges[resetChanges.length - 1].resetDay
+      : rawResetDay == null
+        ? 1
+        : rawResetDay;
+
     entries = rawState.entries;
     if (!Array.isArray(entries)) error('지출 기록 목록 형식이 올바르지 않습니다.');
     normalizedEntries = [];
@@ -319,19 +539,35 @@
       entries: normalizedEntries,
       limit: baseLimit,
       limitChanges: changes,
+      resetDay: resetDay,
+      resetChanges: resetChanges,
+      resetConfigured: resetConfigured,
       onboardingComplete: rawState.onboardingComplete === true
     };
   }
 
-  function createFreshState(initialLimit, onboardingComplete) {
+  function createFreshState(initialLimit, initialResetDay, onboardingComplete) {
     var limit = initialLimit == null ? INITIAL_LIMIT : initialLimit;
+    var startDate = today();
+    var resetDay = initialResetDay == null ? 1 : initialResetDay;
     assertNonNegativeInteger(limit, '기본 한도');
+    if (initialResetDay != null) assertResetDay(initialResetDay);
     return {
-      startDate: today(),
+      startDate: startDate,
       categories: DEFAULT_CATEGORIES.slice(),
       entries: [],
       limit: limit,
       limitChanges: [],
+      resetDay: resetDay,
+      resetChanges:
+        initialResetDay == null
+          ? []
+          : [{
+              configuredOn: startDate,
+              resetDay: resetDay,
+              cycleStart: startDate,
+            }],
+      resetConfigured: initialResetDay != null,
       onboardingComplete: onboardingComplete === true
     };
   }
@@ -362,6 +598,56 @@
     return result;
   }
 
+  function effectiveResetChange(state, isoDate) {
+    var active = null;
+    var i;
+    for (i = 0; i < state.resetChanges.length; i += 1) {
+      if (compareDates(state.resetChanges[i].configuredOn, isoDate) > 0) break;
+      active = state.resetChanges[i];
+    }
+    return active;
+  }
+
+  function effectiveResetDay(state, isoDate) {
+    var active = effectiveResetChange(state, isoDate);
+    return active ? active.resetDay : 1;
+  }
+
+  function cycleStartDate(state, isoDate) {
+    var active = effectiveResetChange(state, isoDate);
+    var resetDay = active ? active.resetDay : 1;
+    var start;
+    if (active) {
+      if (
+        compareDates(isoDate, boundaryOnOrAfter(active.configuredOn, resetDay)) <
+        0
+      )
+        start = active.cycleStart;
+      else start = boundaryOnOrBefore(isoDate, resetDay);
+    } else {
+      start = boundaryOnOrBefore(isoDate, resetDay);
+    }
+    if (compareDates(start, state.startDate) < 0) start = state.startDate;
+    return start;
+  }
+
+  function resetInfo(state, isoDate) {
+    var normalized = stateForUse(state);
+    var date = isoDate == null ? today() : isoDate;
+    var active;
+    var resetDay;
+    assertAvailableDate(normalized, date, '조회 날짜');
+    active = effectiveResetChange(normalized, date);
+    resetDay = effectiveResetDay(normalized, date);
+    return {
+      resetDay: resetDay,
+      configured: normalized.resetConfigured === true,
+      configuredOn: active ? active.configuredOn : null,
+      cycleStart: cycleStartDate(normalized, date),
+      nextReset: nextBoundaryAfter(date, resetDay)
+    };
+  }
+
   function expenseTotalsByDate(state) {
     var totals = Object.create(null);
     var i;
@@ -378,8 +664,7 @@
 
   function calculateDay(state, isoDate) {
     var totals = expenseTotalsByDate(state);
-    var monthStart = isoDate.slice(0, 8) + '01';
-    var from = compareDates(state.startDate, monthStart) > 0 ? state.startDate : monthStart;
+    var from = cycleStartDate(state, isoDate);
     var cursor = from;
     var carry = 0;
     var dailyLimit;
@@ -494,6 +779,10 @@
     );
   }
 
+  function needsResetSetup(state) {
+    return stateForUse(state).resetConfigured !== true;
+  }
+
   function save(state) {
     var normalized = stateForUse(state);
     var serialized;
@@ -518,6 +807,7 @@
     var stored = readStoredState();
     var fresh;
     var initialLimit;
+    var initialResetDay;
     var onboardingComplete;
 
     if (options != null) {
@@ -525,6 +815,8 @@
       initialLimit = options.initialLimit;
       if (initialLimit != null)
         assertNonNegativeInteger(initialLimit, '기본 한도');
+      initialResetDay = options.initialResetDay;
+      if (initialResetDay != null) assertResetDay(initialResetDay);
       onboardingComplete = options.onboardingComplete === true;
     }
 
@@ -532,7 +824,11 @@
       return cloneState(stored.state);
     }
 
-    fresh = createFreshState(initialLimit, onboardingComplete);
+    fresh = createFreshState(
+      initialLimit,
+      initialResetDay,
+      onboardingComplete,
+    );
     save(fresh);
     return cloneState(fresh);
   }
@@ -565,6 +861,48 @@
 
     next = cloneState(normalized);
     next.limitChanges = changes;
+    return next;
+  }
+
+  function setResetDay(state, value) {
+    var normalized = stateForUse(state);
+    var resetDay = value;
+    var configuredOn = today();
+    var cycleStart = cycleStartDate(normalized, configuredOn);
+    var changes;
+    var replaced = false;
+    var next;
+
+    assertResetDay(resetDay);
+    changes = normalized.resetChanges.map(function (change) {
+      if (change.configuredOn === configuredOn) {
+        replaced = true;
+        return {
+          configuredOn: configuredOn,
+          resetDay: resetDay,
+          cycleStart: cycleStart,
+        };
+      }
+      return {
+        configuredOn: change.configuredOn,
+        resetDay: change.resetDay,
+        cycleStart: change.cycleStart,
+      };
+    });
+    if (!replaced) {
+      changes.push({
+        configuredOn: configuredOn,
+        resetDay: resetDay,
+        cycleStart: cycleStart,
+      });
+    }
+    changes.sort(function (left, right) {
+      return compareDates(left.configuredOn, right.configuredOn);
+    });
+    next = cloneState(normalized);
+    next.resetDay = resetDay;
+    next.resetChanges = changes;
+    next.resetConfigured = true;
     return next;
   }
 
@@ -677,9 +1015,12 @@
     open: open,
     hasStoredState: hasStoredState,
     needsInitialSetup: needsInitialSetup,
+    needsResetSetup: needsResetSetup,
     save: save,
     day: day,
     setLimit: setLimit,
+    setResetDay: setResetDay,
+    resetInfo: resetInfo,
     addCategory: addCategory,
     addExpense: addExpense,
     updateExpense: updateExpense,

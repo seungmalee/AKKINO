@@ -57,26 +57,35 @@
     <section
       id="setup-screen"
       class="onboarding-screen setup-screen"
-      aria-labelledby="setup-title"
+      aria-label="가계부 설정"
       hidden
     >
       <form id="setup-form" class="setup-content" novalidate>
-        <h1 id="setup-title">하루 동안 사용할<br />한도를 정하세요.</h1>
-        <label class="setup-amount" for="setup-limit">
-          <span class="sr-only">하루 한도</span>
-          <input
-            id="setup-limit"
-            type="text"
-            inputmode="numeric"
-            enterkeyhint="go"
-            autocomplete="off"
-            maxlength="22"
-            placeholder="0"
-            aria-describedby="setup-error"
-            required
-          />
-          <span class="setup-unit">원</span>
-        </label>
+        <div id="setup-limit-group">
+          <h1 id="setup-title">하루 동안 사용할<br />한도를 정하세요.</h1>
+          <label class="setup-amount" for="setup-limit">
+            <span class="sr-only">하루 한도</span>
+            <input
+              id="setup-limit"
+              type="text"
+              inputmode="numeric"
+              enterkeyhint="go"
+              autocomplete="off"
+              maxlength="22"
+              placeholder="0"
+              aria-describedby="setup-error"
+              required
+            />
+            <span class="setup-unit">원</span>
+          </label>
+        </div>
+        <div id="setup-reset-group" hidden>
+          <label id="setup-reset-label" for="setup-reset-day">매월 언제 초기화할까요?</label>
+          <select id="setup-reset-day" aria-describedby="setup-reset-hint setup-error" required>
+            <option value="" disabled selected>날짜 선택</option>
+          </select>
+          <p id="setup-reset-hint">해당 날짜가 없는 달에는 말일에 초기화해요.</p>
+        </div>
         <p
           id="setup-error"
           class="onboarding-error setup-error"
@@ -89,7 +98,7 @@
         class="onboarding-next"
         type="submit"
         form="setup-form"
-        aria-label="한도를 저장하고 시작"
+        aria-label="설정 저장하고 시작"
         hidden
       >
         <span>Next</span>
@@ -145,6 +154,7 @@
           오늘로
         </button>
         <p
+          id="carry-info"
           title="전날 남은 금액은 더하고 초과한 금액은 차감합니다. 매월 1일에 초기화됩니다."
         >
           전일 이월 <strong id="carry-amount">0</strong><span>원</span>
@@ -202,7 +212,7 @@
       </section>
       <footer>
         <p id="save-status" role="status">입력하면 자동 저장돼요.</p>
-        <p>매월 1일 이월 초기화</p>
+        <p id="reset-summary">매월 1일 이월 초기화</p>
       </footer>
     </main>
   </body>

@@ -9,19 +9,38 @@
   <style>
     .logo-shine {
       transform-origin: 0 0;
-      transform: translate(-300px, 180px) rotate(-24deg);
-      animation: akkino-shine 1s cubic-bezier(0.4, 0, 0.2, 1) 640ms both;
+      transform: translate(12px, 140px);
+      animation: akkino-light-travel 2s linear 640ms forwards;
     }
-    @keyframes akkino-shine {
+    .logo-shine-glow {
+      opacity: 0;
+      animation: akkino-light-fade 2s linear 640ms forwards;
+    }
+    @keyframes akkino-light-travel {
       from {
-        transform: translate(-300px, 180px) rotate(-24deg);
+        transform: translate(12px, 140px);
       }
       to {
-        transform: translate(1160px, -180px) rotate(-24deg);
+        transform: translate(850px, 23px);
+      }
+    }
+    @keyframes akkino-light-fade {
+      0% {
+        opacity: 1;
+      }
+      4% {
+        opacity: 1;
+      }
+      96% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
       }
     }
     @media (prefers-reduced-motion: reduce) {
-      .logo-shine {
+      .logo-shine,
+      .logo-shine-glow {
         display: none;
         animation: none;
       }
@@ -41,23 +60,156 @@
       <stop offset="0.65" stop-color="#258ef2" />
       <stop offset="1" stop-color="#1d57ce" />
     </linearGradient>
-    <linearGradient id="lettering-light">
-      <stop offset="0.08" stop-color="#fff" stop-opacity="0" />
-      <stop offset="0.27" stop-color="#fff" stop-opacity="0.08" />
-      <stop offset="0.49" stop-color="#fff" stop-opacity="0.9" />
-      <stop offset="0.52" stop-color="#fff" stop-opacity="0.96" />
-      <stop offset="0.68" stop-color="#fff" stop-opacity="0.22" />
-      <stop offset="0.92" stop-color="#fff" stop-opacity="0" />
-    </linearGradient>
+    <radialGradient id="water-reflection" cx="0.35" cy="0.23" r="0.76">
+      <stop offset="0" stop-color="#f4fdff" stop-opacity="0.55" />
+      <stop offset="0.36" stop-color="#ddf8ff" stop-opacity="0.28" />
+      <stop offset="1" stop-color="#b6ecff" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="moving-light-halo">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.95" />
+      <stop offset="0.22" stop-color="#f1fcff" stop-opacity="0.75" />
+      <stop offset="0.56" stop-color="#d8f6ff" stop-opacity="0.3" />
+      <stop offset="1" stop-color="#c2efff" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="moving-light-core">
+      <stop offset="0" stop-color="#fff" />
+      <stop offset="0.45" stop-color="#fff" stop-opacity="0.96" />
+      <stop offset="1" stop-color="#effcff" stop-opacity="0" />
+    </radialGradient>
+    <filter
+      id="water-volume"
+      x="-12"
+      y="-12"
+      width="902"
+      height="178"
+      filterUnits="userSpaceOnUse"
+      color-interpolation-filters="sRGB"
+    >
+      <!-- A soft alpha height field gives each stroke a convex, liquid surface. -->
+      <feGaussianBlur
+        in="SourceAlpha"
+        stdDeviation="5.5"
+        result="rounded-surface"
+      />
+      <feDiffuseLighting
+        in="rounded-surface"
+        surfaceScale="10"
+        diffuseConstant="1"
+        lighting-color="#edfaff"
+        result="soft-light"
+      >
+        <feDistantLight azimuth="225" elevation="55" />
+      </feDiffuseLighting>
+      <feComposite
+        in="SourceGraphic"
+        in2="soft-light"
+        operator="arithmetic"
+        k1="0.58"
+        k2="0.42"
+        k3="0"
+        k4="0"
+        result="blue-body"
+      />
+      <feSpecularLighting
+        in="rounded-surface"
+        surfaceScale="14"
+        specularConstant="0.82"
+        specularExponent="24"
+        lighting-color="#effcff"
+        result="curved-reflection"
+      >
+        <feDistantLight azimuth="225" elevation="55" />
+      </feSpecularLighting>
+      <feComposite
+        in="curved-reflection"
+        in2="SourceAlpha"
+        operator="in"
+        result="inner-reflection"
+      />
+      <feBlend
+        in="blue-body"
+        in2="inner-reflection"
+        mode="screen"
+        result="lit-body"
+      />
+      <!-- Thin, soft meniscus edges stay inside the lettering. -->
+      <feOffset in="SourceAlpha" dx="1.2" dy="2.5" result="lowered-alpha" />
+      <feComposite
+        in="SourceAlpha"
+        in2="lowered-alpha"
+        operator="out"
+        result="upper-edge"
+      />
+      <feGaussianBlur
+        in="upper-edge"
+        stdDeviation="0.65"
+        result="soft-upper-edge"
+      />
+      <feFlood flood-color="#effcff" flood-opacity="0.7" result="edge-white" />
+      <feComposite
+        in="edge-white"
+        in2="soft-upper-edge"
+        operator="in"
+        result="bright-meniscus"
+      />
+      <feOffset in="SourceAlpha" dx="-0.8" dy="-1.8" result="raised-alpha" />
+      <feComposite
+        in="SourceAlpha"
+        in2="raised-alpha"
+        operator="out"
+        result="lower-edge"
+      />
+      <feGaussianBlur
+        in="lower-edge"
+        stdDeviation="0.7"
+        result="soft-lower-edge"
+      />
+      <feFlood flood-color="#a7eaff" flood-opacity="0.42" result="edge-blue" />
+      <feComposite
+        in="edge-blue"
+        in2="soft-lower-edge"
+        operator="in"
+        result="lower-refraction"
+      />
+      <feMerge result="water-surface">
+        <feMergeNode in="lit-body" />
+        <feMergeNode in="bright-meniscus" />
+        <feMergeNode in="lower-refraction" />
+      </feMerge>
+      <feComposite
+        in="water-surface"
+        in2="SourceAlpha"
+        operator="in"
+        result="finished-lettering"
+      />
+      <feDropShadow
+        in="finished-lettering"
+        dx="0"
+        dy="2"
+        stdDeviation="2"
+        flood-color="#2278b4"
+        flood-opacity="0.12"
+      />
+    </filter>
+    <filter
+      id="soft-caustic"
+      x="-20%"
+      y="-20%"
+      width="140%"
+      height="140%"
+      color-interpolation-filters="sRGB"
+    >
+      <feGaussianBlur stdDeviation="0.8" />
+    </filter>
     <path
       id="akkino-lettering"
       fill-rule="evenodd"
       clip-rule="evenodd"
-      d="M0 150 58 8Q61 0 70 0H86Q95 0 98 8L156 150H116L105 120H50L39 150ZM62 87H94L78 43Z
-         M178 0H216V59L266 0H313L249 73 319 150H270L216 90V150H178Z
-         M334 0H372V59L422 0H469L405 73 475 150H426L372 90V150H334Z
-         M494 0H533V136Q533 150 519 150H494Z
-         M555 150V0H590L656 88V0H694V150H660L593 61V150Z
+      d="M4 150Q-1 150 1 145L58 9Q62 0 71 0H85Q94 0 98 9L155 145Q157 150 152 150H120Q116 150 114 146L104 120H51L40 146Q38 150 34 150ZM63 87H93L78 45Z
+         M184 0H210Q216 0 216 6V59L264 3Q266 0 271 0H307Q314 0 309 6L249 73L316 143Q322 150 313 150H275Q271 150 268 146L216 90V144Q216 150 210 150H184Q178 150 178 144V6Q178 0 184 0Z
+         M340 0H366Q372 0 372 6V59L420 3Q422 0 427 0H463Q470 0 465 6L405 73L472 143Q478 150 469 150H431Q427 150 424 146L372 90V144Q372 150 366 150H340Q334 150 334 144V6Q334 0 340 0Z
+         M500 0H527Q533 0 533 6V136Q533 150 519 150H500Q494 150 494 144V6Q494 0 500 0Z
+         M561 150Q555 150 555 144V6Q555 0 561 0H586Q590 0 593 3L656 88V6Q656 0 662 0H688Q694 0 694 6V144Q694 150 688 150H664Q660 150 657 146L593 61V144Q593 150 587 150Z
          M796-2C847-2 878 28 878 75S847 152 796 152 714 122 714 75 745-2 796-2ZM796 34C768 34 753 49 753 75S768 116 796 116 839 101 839 75 824 34 796 34Z"
     />
     <clipPath id="akkino-clip">
@@ -65,16 +217,78 @@
     </clipPath>
   </defs>
   <g transform="translate(8 8)">
-    <use href="#akkino-lettering" fill="url(#sky-to-blue)" />
+    <use
+      href="#akkino-lettering"
+      fill="url(#sky-to-blue)"
+      filter="url(#water-volume)"
+    />
     <g clip-path="url(#akkino-clip)">
-      <rect
-        class="logo-shine"
-        x="-130"
-        y="-210"
-        width="200"
-        height="600"
-        fill="url(#lettering-light)"
-      />
+      <!-- Local reflections follow the individual curved strokes, never a flat band. -->
+      <g fill="url(#water-reflection)">
+        <ellipse cx="65" cy="35" rx="32" ry="57" transform="rotate(20 65 35)" />
+        <ellipse cx="196" cy="39" rx="19" ry="56" />
+        <ellipse
+          cx="274"
+          cy="20"
+          rx="31"
+          ry="18"
+          transform="rotate(-39 274 20)"
+        />
+        <ellipse cx="352" cy="39" rx="19" ry="56" />
+        <ellipse
+          cx="430"
+          cy="20"
+          rx="31"
+          ry="18"
+          transform="rotate(-39 430 20)"
+        />
+        <ellipse cx="511" cy="37" rx="19" ry="58" />
+        <ellipse cx="572" cy="34" rx="18" ry="52" />
+        <ellipse cx="673" cy="33" rx="18" ry="54" />
+        <ellipse
+          cx="764"
+          cy="25"
+          rx="49"
+          ry="31"
+          transform="rotate(-25 764 25)"
+        />
+      </g>
+      <g
+        fill="none"
+        stroke="#e0faff"
+        stroke-linecap="round"
+        filter="url(#soft-caustic)"
+      >
+        <path d="M18 132 54 43" stroke-width="2.5" opacity="0.42" />
+        <path
+          d="M731 63C738 33 760 15 789 13"
+          stroke-width="3.5"
+          opacity="0.57"
+        />
+        <path
+          d="M775 135C809 142 847 119 858 89"
+          stroke-width="2"
+          opacity="0.4"
+        />
+      </g>
+      <g class="logo-shine">
+        <g class="logo-shine-glow" transform="rotate(-7.948)">
+          <ellipse
+            cx="-5"
+            cy="0"
+            rx="62"
+            ry="27"
+            fill="url(#moving-light-halo)"
+          />
+          <ellipse
+            cx="0"
+            cy="0"
+            rx="22"
+            ry="10"
+            fill="url(#moving-light-core)"
+          />
+        </g>
+      </g>
     </g>
   </g>
 </svg>
