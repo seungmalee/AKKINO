@@ -300,7 +300,7 @@
     }
   }
   function enterLedger(nextState) {
-    var blankRow;
+    var ledgerScreen;
     state = nextState || api.open();
     hasSaved = true;
     selectedDate = api.today();
@@ -317,11 +317,11 @@
       bindLedgerEvents();
       ledgerBound = true;
     }
-    blankRow = rows.find(function (row) {
-      return !row.savedId && !row.addingCategory;
-    });
-    if (blankRow) blankRow.categorySelect.focus();
-    else $("selected-date").focus();
+    // Focus the screen itself, not a field: focusing a select or date input
+    // pops open the picker on iPhone as soon as the ledger appears.
+    ledgerScreen = $("ledger-screen");
+    ledgerScreen.setAttribute("tabindex", "-1");
+    ledgerScreen.focus({ preventScroll: true });
   }
   function continueFromIntro() {
     var probe;

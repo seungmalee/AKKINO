@@ -666,3 +666,7 @@ footer p {
     --gutter: 12px;
   }
 }
+
+.ledger:focus {
+  outline: none;
+}
