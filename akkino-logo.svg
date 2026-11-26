@@ -5,6 +5,7 @@
   aria-labelledby="akkino-title"
 >
   <title id="akkino-title">AKKINO</title>
+  <view id="app-icon" viewBox="0 0 172 172" />
   <style>
     .logo-shine {
       transform-origin: 0 0;
