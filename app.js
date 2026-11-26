@@ -15,6 +15,9 @@
   var limitError = "";
   var hasSaved = false;
   var ADD_CATEGORY = "__ledger_add_category__";
+  var ledgerBound = false;
+  var setupSubmitting = false;
+  var introAdvanced = false;
 
   function format(amount) {
     return money.format(amount);
@@ -50,6 +53,75 @@
           : "지출은 1원 이상 입력해주세요.",
       );
     return amount;
+  }
+  function probeStorage() {
+    try {
+      return { available: true, present: api.hasStoredState() };
+    } catch (error) {
+      return { available: false, present: false, error: error };
+    }
+  }
+  function setScreen(name) {
+    var intro = $("intro-screen");
+    var setup = $("setup-screen");
+    var ledger = $("ledger-screen");
+    if (intro) intro.hidden = name !== "intro";
+    if (setup) setup.hidden = name !== "setup";
+    if (ledger) ledger.hidden = name !== "ledger";
+  }
+  function setIntroError(message) {
+    var element = $("intro-error");
+    if (!element) return;
+    element.textContent = message || "";
+    element.hidden = !message;
+  }
+  function setSetupError(message) {
+    var element = $("setup-error");
+    var input = $("setup-limit");
+    if (element) {
+      element.textContent = message || "";
+      element.hidden = !message;
+    }
+    if (input) input.setAttribute("aria-invalid", String(Boolean(message)));
+  }
+  function showIntro() {
+    introAdvanced = false;
+    setScreen("intro");
+    setIntroError("");
+    var next = $("intro-next");
+    if (next) next.focus();
+  }
+  function showSetup() {
+    var input = $("setup-limit");
+    var next = $("setup-next");
+    setScreen("setup");
+    setSetupError("");
+    if (next) next.hidden = true;
+    if (input) {
+      input.value = "";
+      input.focus();
+    }
+  }
+  function setupAmount() {
+    var input = $("setup-limit");
+    var next = $("setup-next");
+    var raw = input ? input.value.trim() : "";
+    var amount;
+    if (!raw) {
+      if (next) next.hidden = true;
+      setSetupError("");
+      return null;
+    }
+    try {
+      amount = parseMoney(raw, true);
+      if (next) next.hidden = false;
+      setSetupError("");
+      return amount;
+    } catch (error) {
+      if (next) next.hidden = true;
+      setSetupError(error.message);
+      return null;
+    }
   }
   function setPageError(message) {
     $("fatal-error").textContent = message || "";
@@ -163,6 +235,133 @@
       updateStatus();
     } catch (error) {
       setPageError(error.message);
+    }
+  }
+  function enterLedger(nextState) {
+    var blankRow;
+    state = nextState || api.open();
+    hasSaved = true;
+    selectedDate = api.today();
+    knownToday = selectedDate;
+    followingToday = true;
+    limitEditDate = null;
+    limitDirty = false;
+    limitError = "";
+    setScreen("ledger");
+    loadDateRows();
+    paintDate();
+    updateTotals();
+    if (!ledgerBound) {
+      bindLedgerEvents();
+      ledgerBound = true;
+    }
+    blankRow = rows.find(function (row) {
+      return !row.savedId && !row.addingCategory;
+    });
+    if (blankRow) blankRow.categorySelect.focus();
+    else $("selected-date").focus();
+  }
+  function continueFromIntro() {
+    var probe;
+    var existing;
+    if (introAdvanced) return;
+    introAdvanced = true;
+    setIntroError("");
+    probe = probeStorage();
+    if (!probe.available) {
+      introAdvanced = false;
+      setIntroError(
+        (probe.error && probe.error.message) ||
+          "저장 공간에 접근할 수 없습니다.",
+      );
+      return;
+    }
+    if (!probe.present) {
+      showSetup();
+      return;
+    }
+    try {
+      existing = api.open();
+      if (api.needsInitialSetup(existing)) showSetup();
+      else enterLedger(existing);
+    } catch (error) {
+      introAdvanced = false;
+      setIntroError(error.message || "가계부를 불러오지 못했어요.");
+    }
+  }
+  function completeSetup() {
+    var input = $("setup-limit");
+    var amount = setupAmount();
+    var current;
+    var next;
+    if (setupSubmitting) return false;
+    if (amount === null) {
+      if (input && !input.value.trim()) setSetupError("하루 한도를 입력해주세요.");
+      return false;
+    }
+    setupSubmitting = true;
+    try {
+      current = api.open({
+        initialLimit: amount,
+        onboardingComplete: true,
+      });
+      if (!current.onboardingComplete && api.needsInitialSetup(current)) {
+        next = api.setLimit(
+          current,
+          current.startDate < api.today() ? api.today() : current.startDate,
+          amount,
+        );
+        next.onboardingComplete = true;
+        saveState(next);
+        current = next;
+      } else {
+        state = current;
+        hasSaved = true;
+      }
+      setupSubmitting = false;
+      setSetupError("");
+      setIntroError("");
+      enterLedger(current);
+      return true;
+    } catch (error) {
+      setupSubmitting = false;
+      setSetupError(error.message || "저장하지 못했어요.");
+      return false;
+    }
+  }
+  function bindOnboardingEvents() {
+    var introNext = $("intro-next");
+    var intro = $("intro-screen");
+    var setup = $("setup-screen");
+    var form = $("setup-form");
+    var input = $("setup-limit");
+    if (introNext) introNext.addEventListener("click", continueFromIntro);
+    if (intro) {
+      intro.addEventListener("click", function (event) {
+        if (
+          event.target !== intro &&
+          event.target.closest &&
+          event.target.closest("button, #intro-error")
+        )
+          return;
+        continueFromIntro();
+      });
+    }
+    if (input) {
+      input.addEventListener("input", function () {
+        setupAmount();
+      });
+    }
+    if (form) {
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        completeSetup();
+      });
+    }
+    if (setup) {
+      setup.addEventListener("click", function (event) {
+        if (event.target === setup && setupAmount() !== null) completeSetup();
+      });
     }
   }
   function fillCategories(row) {
@@ -645,17 +844,7 @@
       setPageError(error.message);
     }
   }
-  function start() {
-    if (!api)
-      throw new Error(
-        "가계부를 불러오지 못했어요. 파일이 모두 있는지 확인해주세요.",
-      );
-    state = api.open();
-    selectedDate = api.today();
-    knownToday = selectedDate;
-    loadDateRows();
-    paintDate();
-    updateTotals();
+  function bindLedgerEvents() {
     $("previous-day").addEventListener("click", function () {
       navigate(shiftDate(selectedDate, -1));
     });
@@ -713,6 +902,14 @@
     window.setInterval(function () {
       syncCurrentDay(false);
     }, 30000);
+  }
+  function start() {
+    if (!api)
+      throw new Error(
+        "가계부를 불러오지 못했어요. 파일이 모두 있는지 확인해주세요.",
+      );
+    bindOnboardingEvents();
+    showIntro();
   }
   try {
     start();

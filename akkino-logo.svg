@@ -1,0 +1,79 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 894 168"
+  role="img"
+  aria-labelledby="akkino-title"
+>
+  <title id="akkino-title">AKKINO</title>
+  <style>
+    .logo-shine {
+      transform-origin: 0 0;
+      transform: translate(-300px, 180px) rotate(-24deg);
+      animation: akkino-shine 1s cubic-bezier(0.4, 0, 0.2, 1) 640ms both;
+    }
+    @keyframes akkino-shine {
+      from {
+        transform: translate(-300px, 180px) rotate(-24deg);
+      }
+      to {
+        transform: translate(1160px, -180px) rotate(-24deg);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .logo-shine {
+        display: none;
+        animation: none;
+      }
+    }
+  </style>
+  <defs>
+    <linearGradient
+      id="sky-to-blue"
+      x1="0"
+      y1="0"
+      x2="878"
+      y2="150"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop offset="0" stop-color="#72d3ff" />
+      <stop offset="0.3" stop-color="#38b6fb" />
+      <stop offset="0.65" stop-color="#258ef2" />
+      <stop offset="1" stop-color="#1d57ce" />
+    </linearGradient>
+    <linearGradient id="lettering-light">
+      <stop offset="0.08" stop-color="#fff" stop-opacity="0" />
+      <stop offset="0.27" stop-color="#fff" stop-opacity="0.08" />
+      <stop offset="0.49" stop-color="#fff" stop-opacity="0.9" />
+      <stop offset="0.52" stop-color="#fff" stop-opacity="0.96" />
+      <stop offset="0.68" stop-color="#fff" stop-opacity="0.22" />
+      <stop offset="0.92" stop-color="#fff" stop-opacity="0" />
+    </linearGradient>
+    <path
+      id="akkino-lettering"
+      fill-rule="evenodd"
+      clip-rule="evenodd"
+      d="M0 150 58 8Q61 0 70 0H86Q95 0 98 8L156 150H116L105 120H50L39 150ZM62 87H94L78 43Z
+         M178 0H216V59L266 0H313L249 73 319 150H270L216 90V150H178Z
+         M334 0H372V59L422 0H469L405 73 475 150H426L372 90V150H334Z
+         M494 0H533V136Q533 150 519 150H494Z
+         M555 150V0H590L656 88V0H694V150H660L593 61V150Z
+         M796-2C847-2 878 28 878 75S847 152 796 152 714 122 714 75 745-2 796-2ZM796 34C768 34 753 49 753 75S768 116 796 116 839 101 839 75 824 34 796 34Z"
+    />
+    <clipPath id="akkino-clip">
+      <use href="#akkino-lettering" clip-rule="evenodd" />
+    </clipPath>
+  </defs>
+  <g transform="translate(8 8)">
+    <use href="#akkino-lettering" fill="url(#sky-to-blue)" />
+    <g clip-path="url(#akkino-clip)">
+      <rect
+        class="logo-shine"
+        x="-130"
+        y="-210"
+        width="200"
+        height="600"
+        fill="url(#lettering-light)"
+      />
+    </g>
+  </g>
+</svg>

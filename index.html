@@ -2,19 +2,103 @@
 <html lang="ko">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <meta name="theme-color" content="#ffffff" />
     <meta
       name="description"
       content="하루 한도와 이월 금액을 기록하는 가계부"
     />
-    <title>가계부</title>
+    <title>AKKINO</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="intro.css" />
     <script src="ledger.js" defer></script>
     <script src="app.js" defer></script>
   </head>
   <body>
-    <main class="ledger" aria-label="가계부">
+    <section
+      id="intro-screen"
+      class="onboarding-screen intro-screen"
+      aria-label="AKKINO 시작"
+    >
+      <div class="intro-object">
+        <img
+          class="akkino-logo"
+          src="akkino-logo.svg"
+          alt="AKKINO"
+          width="894"
+          height="168"
+          draggable="false"
+          fetchpriority="high"
+        />
+      </div>
+      <p
+        id="intro-error"
+        class="onboarding-error intro-error"
+        role="alert"
+        hidden
+      ></p>
+      <button
+        id="intro-next"
+        class="onboarding-next"
+        type="button"
+        aria-label="다음 화면"
+      >
+        <span>Next</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 12h15m-6-6 6 6-6 6" />
+        </svg>
+      </button>
+    </section>
+
+    <section
+      id="setup-screen"
+      class="onboarding-screen setup-screen"
+      aria-labelledby="setup-title"
+      hidden
+    >
+      <form id="setup-form" class="setup-content" novalidate>
+        <h1 id="setup-title">하루 동안 사용할<br />한도를 정하세요.</h1>
+        <label class="setup-amount" for="setup-limit">
+          <span class="sr-only">하루 한도</span>
+          <input
+            id="setup-limit"
+            type="text"
+            inputmode="numeric"
+            enterkeyhint="go"
+            autocomplete="off"
+            maxlength="22"
+            placeholder="0"
+            aria-describedby="setup-error"
+            required
+          />
+          <span class="setup-unit">원</span>
+        </label>
+        <p
+          id="setup-error"
+          class="onboarding-error setup-error"
+          role="alert"
+          hidden
+        ></p>
+      </form>
+      <button
+        id="setup-next"
+        class="onboarding-next"
+        type="submit"
+        form="setup-form"
+        aria-label="한도를 저장하고 시작"
+        hidden
+      >
+        <span>Next</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 12h15m-6-6 6 6-6 6" />
+        </svg>
+      </button>
+    </section>
+
+    <main id="ledger-screen" class="ledger" aria-label="가계부" hidden>
       <header class="ledger-header">
         <div class="date-navigation" aria-label="날짜 선택">
           <button
