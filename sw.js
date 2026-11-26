@@ -1,6 +1,7 @@
-// Offline support: serve the app shell from cache, refresh it in the background.
-// Bump CACHE when shipping changes so installed apps pick up the new files.
-var CACHE = "akkino-v2";
+// Offline support. Online: always fetch fresh files (bypassing the browser's
+// HTTP cache) and keep a copy. Offline: serve the saved copy.
+// Bump CACHE when shipping changes so old copies are cleared.
+var CACHE = "akkino-v3";
 var SHELL = [
   "./",
   "index.html",
@@ -18,7 +19,10 @@ var SHELL = [
 self.addEventListener("install", function (event) {
   event.waitUntil(
     caches.open(CACHE).then(function (cache) {
-      return cache.addAll(SHELL);
+      // cache: "reload" skips the HTTP cache so a new release never stores old files.
+      return cache.addAll(SHELL.map(function (url) {
+        return new Request(url, { cache: "reload" });
+      }));
     }).then(function () {
       return self.skipWaiting();
     })
@@ -42,17 +46,21 @@ self.addEventListener("activate", function (event) {
 self.addEventListener("fetch", function (event) {
   var request = event.request;
   if (request.method !== "GET" || new URL(request.url).origin !== self.location.origin) return;
+  var navigate = request.mode === "navigate";
+  var key = navigate ? "index.html" : request;
+  // A navigate-mode Request can't be re-issued with options, so rebuild it from the URL.
+  var fresh = navigate
+    ? new Request(request.url, { cache: "no-cache", credentials: "same-origin" })
+    : new Request(request, { cache: "no-cache" });
   event.respondWith(
     caches.open(CACHE).then(function (cache) {
-      var lookup = request.mode === "navigate" ? "index.html" : request;
-      return cache.match(lookup, { ignoreSearch: true }).then(function (cached) {
-        var network = fetch(request).then(function (response) {
-          if (response && response.ok) cache.put(lookup, response.clone());
-          return response;
-        }).catch(function () {
-          return cached;
+      return fetch(fresh).then(function (response) {
+        if (response && response.ok) cache.put(key, response.clone());
+        return response;
+      }).catch(function () {
+        return cache.match(key, { ignoreSearch: true }).then(function (cached) {
+          return cached || Response.error();
         });
-        return cached || network;
       });
     })
   );
