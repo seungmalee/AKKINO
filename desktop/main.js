@@ -1,7 +1,7 @@
 // AKKINO desktop: runs the bundled web app in its own window, fully offline.
 // Pages are served from a private akkino:// origin so saved data (localStorage)
 // stays put between launches and app updates.
-const { app, BrowserWindow, net, protocol, shell } = require("electron");
+const { app, BrowserWindow, net, protocol, screen, shell } = require("electron");
 const path = require("path");
 const { pathToFileURL } = require("url");
 
@@ -25,10 +25,18 @@ function serveAppFile(request) {
   return net.fetch(pathToFileURL(file).toString());
 }
 
+// Default window matches a phone screen (iPhone 14/15: 390x844 points),
+// shrunk to fit shorter displays. Users can still resize it.
+const PHONE_WIDTH = 390;
+const PHONE_HEIGHT = 844;
+
 function createWindow() {
+  const { height: workHeight } = screen.getPrimaryDisplay().workAreaSize;
   const win = new BrowserWindow({
-    width: 960,
-    height: 800,
+    width: PHONE_WIDTH,
+    height: Math.min(PHONE_HEIGHT, workHeight - 40),
+    useContentSize: true,
+    center: true,
     minWidth: 320,
     minHeight: 480,
     title: "AKKINO",
